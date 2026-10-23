@@ -674,7 +674,6 @@ function JayvcHome() {
                   </div>
                   {configQuery.isLoading && <div className="status-box info" role="status" data-testid="status-config-loading">Checking service availability…</div>}
                   {configQuery.isError && <div className="status-box error" role="alert" data-testid="status-config-error">Availability could not be checked. Start is paused until the service responds.</div>}
-                  {(phase === 'denied' || phase === 'unavailable') && phaseMessage && <div className="status-box error" role="alert" data-testid="status-precall-result">{phaseMessage}</div>}
                 </>
               )}
 
