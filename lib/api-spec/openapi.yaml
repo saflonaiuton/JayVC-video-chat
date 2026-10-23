@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: jayvc
+    description: JayVC guest chat and matchmaking operations
 paths:
   /healthz:
     get:
@@ -24,7 +26,120 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /jayvc/config:
+    get:
+      operationId: getJayvcConfig
+      tags: [jayvc]
+      summary: Get public service readiness
+      responses:
+        "200":
+          description: Public readiness state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JayvcConfig"
+  /jayvc/profile:
+    post:
+      operationId: createGuestProfile
+      tags: [jayvc]
+      summary: Create or retrieve the authenticated guest profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Guest display profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuestProfile"
+        "401":
+          description: Invalid guest session
+  /jayvc/queue:
+    post:
+      operationId: joinMatchmakingQueue
+      tags: [jayvc]
+      summary: Join the reciprocal-preference matchmaking queue
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MatchPreferenceInput"
+      responses:
+        "200":
+          description: Queue status and private call credentials when matched
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchStatus"
+        "400":
+          description: Invalid preferences or failed CAPTCHA verification
+        "401":
+          description: Invalid guest session
+        "429":
+          description: Too many matchmaking requests
+    get:
+      operationId: getMatchmakingStatus
+      tags: [jayvc]
+      summary: Read the authenticated guest's queue status
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current queue status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchStatus"
+        "401":
+          description: Invalid guest session
+    delete:
+      operationId: leaveMatchmakingQueue
+      tags: [jayvc]
+      summary: Leave a waiting queue and close the active match
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Queue and match state cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueueActionResult"
+        "401":
+          description: Invalid guest session
+  /jayvc/reports:
+    post:
+      operationId: submitGuestReport
+      tags: [jayvc]
+      summary: Report the other participant in the active match
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GuestReportInput"
+      responses:
+        "201":
+          description: Report received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportResult"
+        "400":
+          description: No reportable active match
+        "401":
+          description: Invalid guest session
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +148,87 @@ components:
           type: string
       required:
         - status
+    JayvcConfig:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: [live, demo]
+        supabaseReady:
+          type: boolean
+        dailyReady:
+          type: boolean
+        turnstileReady:
+          type: boolean
+        supabaseUrl:
+          type: ["string", "null"]
+        supabaseAnonKey:
+          type: ["string", "null"]
+        turnstileSiteKey:
+          type: ["string", "null"]
+      required:
+        - mode
+        - supabaseReady
+        - dailyReady
+        - turnstileReady
+        - supabaseUrl
+        - supabaseAnonKey
+        - turnstileSiteKey
+    GuestProfile:
+      type: object
+      properties:
+        displayName:
+          type: string
+      required: [displayName]
+    MatchPreferenceInput:
+      type: object
+      properties:
+        gender:
+          type: string
+          enum: [Male, Female]
+        matchWith:
+          type: string
+          enum: [Male, Female]
+        turnstileToken:
+          type: string
+      required: [gender, matchWith]
+    MatchStatus:
+      type: object
+      properties:
+        state:
+          type: string
+          enum: [idle, waiting, matched, disconnected, unavailable]
+        displayName:
+          type: ["string", "null"]
+        roomUrl:
+          type: ["string", "null"]
+        meetingToken:
+          type: ["string", "null"]
+        matchId:
+          type: ["string", "null"]
+        message:
+          type: ["string", "null"]
+      required: [state, displayName, roomUrl, meetingToken, matchId, message]
+    QueueActionResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required: [success]
+    GuestReportInput:
+      type: object
+      properties:
+        reason:
+          type: string
+          enum: [inappropriate, harassment, underage, spam, other]
+        details:
+          type: string
+          maxLength: 500
+      required: [reason]
+    ReportResult:
+      type: object
+      properties:
+        submitted:
+          type: boolean
+      required: [submitted]
 
