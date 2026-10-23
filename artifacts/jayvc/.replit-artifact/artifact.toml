@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "JayVC — private conversations, at your pace"
+description = "An adult-only spontaneous one-to-one video chat experience with transparent safety guidance, anonymous guest access, private Daily rooms, and honest demo mode when real-time services are not configured."
+version = "1.0.0"
+id = "artifacts/jayvc"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18943
+
+[services.development]
+run = "pnpm --filter @workspace/jayvc run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/jayvc", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/jayvc/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18943"
+BASE_PATH = "/"
